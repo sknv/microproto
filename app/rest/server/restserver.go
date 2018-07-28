@@ -11,17 +11,12 @@ import (
 	"github.com/twitchtv/twirp"
 
 	"github.com/sknv/microproto/app/lib/xhttp"
+	"github.com/sknv/microproto/app/rest/cfg"
 	math "github.com/sknv/microproto/app/services/math/rpc"
 )
 
 type RestServer struct {
-	mathClient math.Math
-}
-
-func NewRestServer(mathAddr string) *RestServer {
-	return &RestServer{
-		mathClient: math.NewMathProtobufClient(mathAddr, &http.Client{}),
-	}
+	Cfg *cfg.Config
 }
 
 func (s *RestServer) Route(router chi.Router) {
@@ -38,7 +33,8 @@ func (s *RestServer) Rect(w http.ResponseWriter, r *http.Request) {
 		Height: height,
 	}
 
-	reply, err := s.mathClient.Rect(context.Background(), &args)
+	mathClient := math.NewMathProtobufClient(s.Cfg.MathURL, &http.Client{})
+	reply, err := mathClient.Rect(context.Background(), &args)
 	failOnError(w, err)
 	render.JSON(w, r, reply)
 }
@@ -50,7 +46,8 @@ func (s *RestServer) Circle(w http.ResponseWriter, r *http.Request) {
 		Radius: radius,
 	}
 
-	reply, err := s.mathClient.Circle(context.Background(), &args)
+	mathClient := math.NewMathProtobufClient(s.Cfg.MathURL, &http.Client{})
+	reply, err := mathClient.Circle(context.Background(), &args)
 	failOnError(w, err)
 	render.JSON(w, r, reply)
 }

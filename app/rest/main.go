@@ -40,7 +40,7 @@ func main() {
 	xchi.UseThrottle(router, concurrentRequestLimit)
 
 	// handle requests
-	srv := server.NewRestServer(cfg.MathURL)
+	srv := server.RestServer{Cfg: cfg}
 	srv.Route(router)
 
 	// run the http server
