@@ -5,16 +5,16 @@ import (
 	"time"
 
 	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
 
-	"github.com/sknv/microproto/app/lib/xchi"
 	"github.com/sknv/microproto/app/lib/xhttp"
-	"github.com/sknv/microproto/app/rest/cfg"
-	"github.com/sknv/microproto/app/rest/server"
+	"github.com/sknv/microproto/app/services/math/cfg"
+	"github.com/sknv/microproto/app/services/math/internal"
+	"github.com/sknv/microproto/app/services/math/rpc"
 )
 
 const (
-	concurrentRequestLimit = 1000
-	shutdownTimeout        = 60 * time.Second
+	shutdownTimeout = 60 * time.Second
 )
 
 // ----------------------------------------------------------------------------
@@ -36,12 +36,12 @@ func main() {
 
 	// config the http router
 	router := chi.NewRouter()
-	xchi.UseDefaultMiddleware(router)
-	xchi.UseThrottle(router, concurrentRequestLimit)
+	router.Use(middleware.RealIP, middleware.Logger)
 
-	// handle requests
-	srv := server.NewRestServer(cfg.MathURL)
-	srv.Route(router)
+	// handle twirp requests
+	var srv internal.MathServer
+	twirpHandler := rpc.NewMathServer(&srv, nil)
+	router.Mount(rpc.MathPathPrefix, twirpHandler)
 
 	// run the http server
 	var healthCheck healthCheck

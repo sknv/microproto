@@ -1,0 +1,28 @@
+syntax = "proto3";
+package rpc;
+
+// protoc --go_out=. --twirp_out=. *.proto
+
+service Math {
+  rpc Rect(RectArgs) returns (RectReply);
+  rpc Circle(CircleArgs) returns (CircleReply);
+}
+
+message RectArgs {
+  double width = 1;
+  double height = 2;
+}
+
+message RectReply {
+  double perimeter = 1;
+  double square = 2;
+}
+
+message CircleArgs {
+  double radius = 1;
+}
+
+message CircleReply {
+  double length = 1;
+  double square = 2;
+}
