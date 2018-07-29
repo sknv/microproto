@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"net/http"
 	"time"
 
 	"github.com/go-chi/chi"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/sknv/microproto/app/lib/xchi"
 	"github.com/sknv/microproto/app/lib/xhttp"
+	"github.com/sknv/microproto/app/lib/xos"
 	"github.com/sknv/microproto/app/rest/cfg"
 	"github.com/sknv/microproto/app/rest/server"
 )
@@ -18,20 +18,6 @@ const (
 	concurrentRequestLimit = 1000
 	serverShutdownTimeout  = 60 * time.Second
 )
-
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-
-type healthCheck struct{}
-
-func (*healthCheck) healthz(w http.ResponseWriter, _ *http.Request) {
-	w.WriteHeader(http.StatusOK)
-}
-
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
 
 func main() {
 	cfg := cfg.Parse()
@@ -46,14 +32,21 @@ func main() {
 	xchi.UseDefaultMiddleware(router)
 	xchi.UseThrottle(router, concurrentRequestLimit)
 
-	// handle requests
-	srv := server.NewRestServer(grpcConn)
-	srv.Route(router)
+	// handle health check requests
+	var health xhttp.HealthServer
+	router.Get("/healthz", health.Check)
 
-	// start the http server
-	var healthCheck healthCheck
-	router.Get("/healthz", healthCheck.healthz)
-	xhttp.ListenAndServe(cfg.Addr, router, serverShutdownTimeout)
+	// handle requests
+	rest := server.NewRestServer(grpcConn)
+	rest.Route(router)
+
+	// start the http server and schedule a stop
+	srv := xhttp.NewServer(cfg.Addr, router)
+	srv.ListenAndServeAsync()
+	defer srv.StopGracefully(serverShutdownTimeout)
+
+	// wait for a program exit to stop the http server
+	xos.WaitForExit()
 }
 
 func failOnError(err error, msg string) {

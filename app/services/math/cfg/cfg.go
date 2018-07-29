@@ -7,7 +7,8 @@ import (
 )
 
 type Config struct {
-	Addr string `long:"math-addr" env:"MATH_ADDR" default:"localhost:8081" description:"math service address"`
+	Addr       string `long:"math-addr" env:"MATH_ADDR" default:"localhost:8081" description:"math service address"`
+	HealthAddr string `long:"math-health-addr" env:"MATH_HEALTH_ADDR" default:"localhost:8082" description:"health check server address for the math service"`
 }
 
 func Parse() *Config {

@@ -6,42 +6,40 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
-
-	"github.com/sknv/microproto/app/lib/xos"
 )
 
-// Serve listens and serves the grpc server and stops it gracefully with the specified timeout.
-func Serve(server *grpc.Server, listener net.Listener, shutdownTimeout time.Duration) {
-	startServer(server, listener)
-	stopServerGracefully(server, shutdownTimeout)
+type Server struct {
+	*grpc.Server
 }
 
-func startServer(server *grpc.Server, listener net.Listener) {
-	log.Print("[INFO] starting grpc server on ", listener.Addr())
+func NewServer() *Server {
+	srv := grpc.NewServer()
+	return &Server{Server: srv}
+}
+
+func (s *Server) ServeAsync(listener net.Listener) {
+	log.Print("[INFO] starting a grpc server on ", listener.Addr())
 	go func() {
-		if err := server.Serve(listener); err != nil {
+		if err := s.Serve(listener); err != nil {
 			// cannot panic, because this probably is an intentional close
-			log.Print("[ERROR] grpc server stopped: ", err)
+			log.Print("[ERROR] failed to serve a grpc server: ", err)
 		}
 	}()
 }
 
-func stopServerGracefully(server *grpc.Server, shutdownTimeout time.Duration) {
-	// wait for a program exit to stop the server gracefully with the specified timeout
-	xos.WaitForExit()
-
+func (s *Server) StopGracefully(shutdownTimeout time.Duration) {
 	log.Print("[INFO] stopping the grpc server...")
 
 	// wait for a graceful shutdown and then stop the server forcibly
 	shutdownTimer := time.NewTimer(shutdownTimeout)
 	go func() {
 		<-shutdownTimer.C
-		server.Stop()
+		s.Stop()
 		log.Print("[WARN] grpc server forcibly stopped")
 	}()
 
 	// try to stop the server gracefuly
-	server.GracefulStop()
+	s.GracefulStop()
 	serverStoppedGracefuly := shutdownTimer.Stop()
 	if serverStoppedGracefuly {
 		log.Print("[INFO] grpc server gracefully stopped")
