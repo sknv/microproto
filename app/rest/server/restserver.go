@@ -8,15 +8,20 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/render"
-	"github.com/twitchtv/twirp"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/status"
 
+	"github.com/sknv/microproto/app/lib/xgrpc"
 	"github.com/sknv/microproto/app/lib/xhttp"
-	"github.com/sknv/microproto/app/rest/cfg"
 	math "github.com/sknv/microproto/app/services/math/rpc"
 )
 
 type RestServer struct {
-	Cfg *cfg.Config
+	mathClient math.MathClient
+}
+
+func NewRestServer(grpcConn *grpc.ClientConn) *RestServer {
+	return &RestServer{mathClient: math.NewMathClient(grpcConn)}
 }
 
 func (s *RestServer) Route(router chi.Router) {
@@ -33,8 +38,7 @@ func (s *RestServer) Rect(w http.ResponseWriter, r *http.Request) {
 		Height: height,
 	}
 
-	mathClient := math.NewMathProtobufClient(s.Cfg.MathURL, &http.Client{})
-	reply, err := mathClient.Rect(context.Background(), &args)
+	reply, err := s.mathClient.Rect(context.Background(), &args)
 	failOnError(w, err)
 	render.JSON(w, r, reply)
 }
@@ -46,8 +50,7 @@ func (s *RestServer) Circle(w http.ResponseWriter, r *http.Request) {
 		Radius: radius,
 	}
 
-	mathClient := math.NewMathProtobufClient(s.Cfg.MathURL, &http.Client{})
-	reply, err := mathClient.Circle(context.Background(), &args)
+	reply, err := s.mathClient.Circle(context.Background(), &args)
 	failOnError(w, err)
 	render.JSON(w, r, reply)
 }
@@ -71,12 +74,12 @@ func failOnError(w http.ResponseWriter, err error) {
 		return
 	}
 
-	twerr := err.(twirp.Error)
-	errStatus := twirp.ServerHTTPStatusFromErrorCode(twerr.Code())
-	if errStatus != http.StatusInternalServerError {
-		log.Print("[ERROR] ", twerr)
-		http.Error(w, twerr.Error(), errStatus)
+	gerr, _ := status.FromError(err)
+	status := xgrpc.HTTPStatusFromCode(gerr.Code())
+	if status != http.StatusInternalServerError {
+		log.Print("[ERROR] ", gerr.Message())
+		http.Error(w, gerr.Message(), status)
 		xhttp.AbortHandler()
 	}
-	panic(twerr)
+	panic(gerr)
 }

@@ -7,8 +7,8 @@ import (
 )
 
 type Config struct {
-	Addr    string `long:"rest-addr" env:"REST_ADDR" default:"localhost:8080" description:"rest api address"`
-	MathURL string `long:"math-url" env:"MATH_URL" default:"http://localhost:8081" description:"math service url"`
+	Addr     string `long:"rest-addr" env:"REST_ADDR" default:"localhost:8080" description:"rest api address"`
+	MathAddr string `long:"math-addr" env:"MATH_ADDR" default:"localhost:8081" description:"math service address"`
 }
 
 func Parse() *Config {

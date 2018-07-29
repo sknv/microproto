@@ -9,15 +9,15 @@ import (
 	"github.com/sknv/microproto/app/lib/xos"
 )
 
-// ListenAndServe serves the handler at specified port
-// and shuts down server gracefully in a shutdown timeout.
+// ListenAndServe serves the handler on the specified address
+// and stops the server gracefully with the specified timeout.
 func ListenAndServe(addr string, handler http.Handler, shutdownTimeout time.Duration) {
 	server := startServer(handler, addr)
-	shutdownServerGracefully(server, shutdownTimeout)
+	stopServerGracefully(server, shutdownTimeout)
 }
 
 func startServer(handler http.Handler, addr string) *http.Server {
-	log.Print("[INFO] http server started on ", addr)
+	log.Print("[INFO] starting http server on ", addr)
 
 	server := &http.Server{
 		Addr:    addr,
@@ -27,25 +27,23 @@ func startServer(handler http.Handler, addr string) *http.Server {
 	go func() {
 		if err := server.ListenAndServe(); err != nil {
 			// cannot panic, because this probably is an intentional close
-			log.Print("[ERROR] http server shutdown: ", err)
+			log.Print("[ERROR] http server stopped: ", err)
 		}
 	}()
-
 	return server
 }
 
-func shutdownServerGracefully(server *http.Server, shutdownTimeout time.Duration) {
-	// wait for interrupt signal to gracefully shutdown the server with a specified timeout
+func stopServerGracefully(server *http.Server, shutdownTimeout time.Duration) {
+	// wait for a program exit to stop the server gracefully with the specified timeout
 	xos.WaitForExit()
 
-	log.Print("[INFO] shutting down the http server...")
+	log.Print("[INFO] stopping the http server...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		panic(err)
+		log.Fatal("[FATAL] failed to stop the http server gracefully: ", err)
 	}
-
 	log.Print("[INFO] http server gracefully stopped")
 }
