@@ -31,13 +31,14 @@ func main() {
 	xchi.UseDefaultMiddleware(router)
 	xchi.UseThrottle(router, concurrentRequestLimit)
 
+	// handle requests
+	rest, err := server.NewRestServer(cfg, grpcConn)
+	xos.FailOnError(err, "failed to start the rest server")
+	rest.Route(router)
+
 	// handle health check requests
 	var health xhttp.HealthServer
 	router.Get("/healthz", health.Check)
-
-	// handle requests
-	rest := server.NewRestServer(grpcConn)
-	rest.Route(router)
 
 	// start the http server and schedule a stop
 	srv := xhttp.NewServer(cfg.Addr, router)

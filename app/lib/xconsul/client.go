@@ -1,12 +1,12 @@
 package xconsul
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 
 	consul "github.com/hashicorp/consul/api"
+	"github.com/pkg/errors"
 )
 
 type Client struct {
@@ -28,7 +28,7 @@ func NewClient(consulAddr string) (*Client, error) {
 func (c *Client) RegisterService(addr, serviceName string) error {
 	addrs := strings.Split(addr, ":")
 	if len(addrs) != 2 {
-		return errors.New("incorrect address format")
+		return errors.Errorf("incorrect address format: %s", addr)
 	}
 
 	host := addrs[0]
@@ -49,4 +49,12 @@ func (c *Client) RegisterService(addr, serviceName string) error {
 
 func (c *Client) DeregisterService() error {
 	return c.Agent().ServiceDeregister(c.serviceID)
+}
+
+func (c *Client) GetServices(service string) ([]*consul.ServiceEntry, *consul.QueryMeta, error) {
+	addrs, meta, err := c.Health().Service(service, "", true, nil)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to get a service")
+	}
+	return addrs, meta, nil
 }

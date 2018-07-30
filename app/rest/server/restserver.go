@@ -8,25 +8,40 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/render"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
 
+	"github.com/sknv/microproto/app/lib/xconsul"
 	"github.com/sknv/microproto/app/lib/xgrpc"
 	"github.com/sknv/microproto/app/lib/xhttp"
+	"github.com/sknv/microproto/app/rest/cfg"
 	math "github.com/sknv/microproto/app/services/math/rpc"
 )
 
 type RestServer struct {
-	mathClient math.MathClient
+	consulClient *xconsul.Client
+	mathClient   math.MathClient
 }
 
-func NewRestServer(grpcConn *grpc.ClientConn) *RestServer {
-	return &RestServer{mathClient: math.NewMathClient(grpcConn)}
+func NewRestServer(config *cfg.Config, grpcConn *grpc.ClientConn) (*RestServer, error) {
+	consulClient, err := xconsul.NewClient(config.ConsulAddr)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create a rest server")
+	}
+
+	return &RestServer{
+		consulClient: consulClient,
+		mathClient:   math.NewMathClient(grpcConn),
+	}, nil
 }
 
 func (s *RestServer) Route(router chi.Router) {
-	router.Get("/math/rect", s.Rect)
-	router.Get("/math/circle", s.Circle)
+	router.Route("/math", func(r chi.Router) {
+		r.Get("/rect", s.Rect)
+		r.Get("/circle", s.Circle)
+		r.Get("/services", s.Services)
+	})
 }
 
 func (s *RestServer) Rect(w http.ResponseWriter, r *http.Request) {
@@ -53,6 +68,14 @@ func (s *RestServer) Circle(w http.ResponseWriter, r *http.Request) {
 	reply, err := s.mathClient.Circle(context.Background(), &args)
 	abortOnError(w, err)
 	render.JSON(w, r, reply)
+}
+
+func (s *RestServer) Services(w http.ResponseWriter, r *http.Request) {
+	addrs, _, err := s.consulClient.GetServices("math")
+	if err != nil {
+		panic(err)
+	}
+	render.JSON(w, r, addrs)
 }
 
 // ----------------------------------------------------------------------------
