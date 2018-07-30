@@ -1,0 +1,11 @@
+version: '3.5'
+
+services:
+  consul:
+    image: consul:1.2.1
+    command: agent -client 0.0.0.0 -dev -ui
+    ports:
+      - 8300:8300
+      - 8500:8500
+      - 8600:8600
+    restart: unless-stopped
