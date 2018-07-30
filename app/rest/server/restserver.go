@@ -39,7 +39,7 @@ func (s *RestServer) Rect(w http.ResponseWriter, r *http.Request) {
 	}
 
 	reply, err := s.mathClient.Rect(context.Background(), &args)
-	failOnError(w, err)
+	abortOnError(w, err)
 	render.JSON(w, r, reply)
 }
 
@@ -51,7 +51,7 @@ func (s *RestServer) Circle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	reply, err := s.mathClient.Circle(context.Background(), &args)
-	failOnError(w, err)
+	abortOnError(w, err)
 	render.JSON(w, r, reply)
 }
 
@@ -69,7 +69,7 @@ func parseFloat(w http.ResponseWriter, s string) float64 {
 	return val
 }
 
-func failOnError(w http.ResponseWriter, err error) {
+func abortOnError(w http.ResponseWriter, err error) {
 	if err == nil {
 		return
 	}

@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"time"
@@ -18,8 +17,7 @@ import (
 )
 
 const (
-	healthServerStartTimeout = 5 * time.Second
-	serverShutdownTimeout    = 60 * time.Second
+	serverShutdownTimeout = 60 * time.Second
 )
 
 func main() {
@@ -29,11 +27,9 @@ func main() {
 	grpcSrv := startGrpcServerAsync(cfg)
 	defer grpcSrv.StopGracefully(serverShutdownTimeout)
 
-	time.Sleep(healthServerStartTimeout) // wait for grpc server to start
-
 	// connect to grpc
 	grpcConn, err := grpc.Dial(cfg.Addr, grpc.WithInsecure())
-	failOnError(err, "failed to connect to grpc")
+	xos.FailOnError(err, "failed to connect to grpc")
 	defer grpcConn.Close()
 
 	// start the health check server and schedule a stop
@@ -47,7 +43,7 @@ func main() {
 func startGrpcServerAsync(config *cfg.Config) *xgrpc.Server {
 	// listen on the specified address
 	lis, err := net.Listen("tcp", config.Addr)
-	failOnError(err, fmt.Sprintf("failed to listen on %s", config.Addr))
+	xos.FailOnError(err, fmt.Sprintf("failed to listen on %s", config.Addr))
 
 	// handle grpc requests
 	srv := xgrpc.NewServer()
@@ -69,10 +65,4 @@ func startHealthServerAsync(config *cfg.Config, grpcConn *grpc.ClientConn) *xhtt
 	srv := xhttp.NewServer(config.HealthAddr, router)
 	srv.ListenAndServeAsync()
 	return srv
-}
-
-func failOnError(err error, msg string) {
-	if err != nil {
-		log.Fatalf("[FATAL] %s: %s", msg, err)
-	}
 }

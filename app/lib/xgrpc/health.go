@@ -26,8 +26,8 @@ func NewHealthServer(grpcConn *grpc.ClientConn) *HealthServer {
 }
 
 func (s *HealthServer) Check(w http.ResponseWriter, _ *http.Request) {
-	reply, err := s.healthClient.Check(context.Background(), &healthv1.HealthCheckRequest{})
-	if err != nil || reply.GetStatus() != healthv1.HealthCheckResponse_SERVING {
+	check, err := s.healthClient.Check(context.Background(), &healthv1.HealthCheckRequest{})
+	if err != nil || check.GetStatus() != healthv1.HealthCheckResponse_SERVING {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		w.Write([]byte("service unavailable"))
 		return

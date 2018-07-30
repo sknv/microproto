@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"time"
 
 	"github.com/go-chi/chi"
@@ -24,7 +23,7 @@ func main() {
 
 	// connect to grpc
 	grpcConn, err := grpc.Dial(cfg.MathAddr, grpc.WithInsecure())
-	failOnError(err, "failed to connect to grpc")
+	xos.FailOnError(err, "failed to connect to grpc")
 	defer grpcConn.Close()
 
 	// config the http router
@@ -47,10 +46,4 @@ func main() {
 
 	// wait for a program exit to stop the http server
 	xos.WaitForExit()
-}
-
-func failOnError(err error, msg string) {
-	if err != nil {
-		log.Fatalf("[FATAL] %s: %s", msg, err)
-	}
 }

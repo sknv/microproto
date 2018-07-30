@@ -13,11 +13,8 @@ import (
 type MathServer struct{}
 
 func (s *MathServer) Rect(_ context.Context, args *rpc.RectArgs) (*rpc.RectReply, error) {
-	if args.Width <= 0 {
-		return nil, status.Error(codes.InvalidArgument, "width must be a positive number")
-	}
-	if args.Height <= 0 {
-		return nil, status.Error(codes.InvalidArgument, "height must be a positive number")
+	if args.Width <= 0 || args.Height <= 0 {
+		return nil, status.Error(codes.InvalidArgument, "width and height must be positive numbers")
 	}
 
 	return &rpc.RectReply{

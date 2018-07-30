@@ -1,6 +1,6 @@
-// protoc --go_out=plugins=grpc:. *.proto
-
 syntax = "proto3";
+
+// protoc --go_out=plugins=grpc:. *.proto
 
 package rpc;
 
