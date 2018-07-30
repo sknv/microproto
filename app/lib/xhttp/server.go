@@ -5,47 +5,38 @@ import (
 	"log"
 	"net/http"
 	"time"
-
-	"github.com/sknv/microproto/app/lib/xos"
 )
 
-// ListenAndServe serves the handler at specified port
-// and shuts down server gracefully in a shutdown timeout.
-func ListenAndServe(addr string, handler http.Handler, shutdownTimeout time.Duration) {
-	server := startServer(handler, addr)
-	shutdownServerGracefully(server, shutdownTimeout)
+type Server struct {
+	*http.Server
 }
 
-func startServer(handler http.Handler, addr string) *http.Server {
-	log.Print("[INFO] http server started on ", addr)
-
-	server := &http.Server{
+func NewServer(addr string, handler http.Handler) *Server {
+	srv := &http.Server{
 		Addr:    addr,
 		Handler: handler,
 	}
-
-	go func() {
-		if err := server.ListenAndServe(); err != nil {
-			// cannot panic, because this probably is an intentional close
-			log.Print("[ERROR] http server shutdown: ", err)
-		}
-	}()
-
-	return server
+	return &Server{Server: srv}
 }
 
-func shutdownServerGracefully(server *http.Server, shutdownTimeout time.Duration) {
-	// wait for interrupt signal to gracefully shutdown the server with a specified timeout
-	xos.WaitForExit()
+func (s *Server) ListenAndServeAsync() {
+	log.Print("[INFO] starting an http server on ", s.Addr)
+	go func() {
+		if err := s.ListenAndServe(); err != nil {
+			// cannot panic, because this probably is an intentional close
+			log.Print("[ERROR] failed to serve an http server: ", err)
+		}
+	}()
+}
 
-	log.Print("[INFO] shutting down the http server...")
+func (s *Server) StopGracefully(shutdownTimeout time.Duration) {
+	log.Print("[INFO] stopping the http server...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
 
-	if err := server.Shutdown(ctx); err != nil {
-		panic(err)
+	if err := s.Shutdown(ctx); err != nil {
+		log.Fatal("[FATAL] failed to stop the http server gracefully: ", err)
 	}
-
 	log.Print("[INFO] http server gracefully stopped")
 }

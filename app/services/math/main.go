@@ -1,50 +1,68 @@
 package main
 
 import (
+	"fmt"
+	"net"
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
+	"google.golang.org/grpc"
 
+	"github.com/sknv/microproto/app/lib/xgrpc"
 	"github.com/sknv/microproto/app/lib/xhttp"
+	"github.com/sknv/microproto/app/lib/xos"
 	"github.com/sknv/microproto/app/services/math/cfg"
 	"github.com/sknv/microproto/app/services/math/internal"
 	"github.com/sknv/microproto/app/services/math/rpc"
 )
 
 const (
-	shutdownTimeout = 60 * time.Second
+	serverShutdownTimeout = 60 * time.Second
 )
-
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-
-type healthCheck struct{}
-
-func (*healthCheck) healthz(w http.ResponseWriter, _ *http.Request) {
-	w.WriteHeader(http.StatusOK)
-}
-
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
 
 func main() {
 	cfg := cfg.Parse()
 
-	// config the http router
-	router := chi.NewRouter()
-	router.Use(middleware.RealIP, middleware.Logger)
+	// start the grpc server and schedule a stop
+	grpcSrv := startGrpcServerAsync(cfg)
+	defer grpcSrv.StopGracefully(serverShutdownTimeout)
 
-	// handle twirp requests
-	var srv internal.MathServer
-	twirpHandler := rpc.NewMathServer(&srv, nil)
-	router.Mount(rpc.MathPathPrefix, twirpHandler)
+	// connect to grpc
+	grpcConn, err := grpc.Dial(cfg.Addr, grpc.WithInsecure())
+	xos.FailOnError(err, "failed to connect to grpc")
+	defer grpcConn.Close()
 
-	// run the http server
-	var healthCheck healthCheck
-	router.Get("/healthz", healthCheck.healthz)
-	xhttp.ListenAndServe(cfg.Addr, router, shutdownTimeout)
+	// start the health check server and schedule a stop
+	healthSrv := startHealthServerAsync(cfg, grpcConn)
+	defer healthSrv.StopGracefully(serverShutdownTimeout)
+
+	// wait for a program exit to stop the health and grpc servers
+	xos.WaitForExit()
+}
+
+func startGrpcServerAsync(config *cfg.Config) *xgrpc.Server {
+	// listen on the specified address
+	lis, err := net.Listen("tcp", config.Addr)
+	xos.FailOnError(err, fmt.Sprintf("failed to listen on %s", config.Addr))
+
+	// handle grpc requests
+	srv := xgrpc.NewServer()
+	xgrpc.RegisterHealthServer(srv.Server) // handle grpc health check requests
+	rpc.RegisterMathServer(srv.Server, &internal.MathServer{})
+
+	// start the grpc server
+	srv.ServeAsync(lis)
+	return srv
+}
+
+func startHealthServerAsync(config *cfg.Config, grpcConn *grpc.ClientConn) *xhttp.Server {
+	// handle health check requests via http 1.1
+	router := http.NewServeMux()
+	health := xgrpc.NewHealthServer(grpcConn)
+	router.HandleFunc("/healthz", health.Check)
+
+	// start the http 1.1 health check server
+	srv := xhttp.NewServer(config.HealthAddr, router)
+	srv.ListenAndServeAsync()
+	return srv
 }

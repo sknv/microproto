@@ -1,50 +1,49 @@
 package main
 
 import (
-	"net/http"
 	"time"
 
 	"github.com/go-chi/chi"
+	"google.golang.org/grpc"
 
 	"github.com/sknv/microproto/app/lib/xchi"
 	"github.com/sknv/microproto/app/lib/xhttp"
+	"github.com/sknv/microproto/app/lib/xos"
 	"github.com/sknv/microproto/app/rest/cfg"
 	"github.com/sknv/microproto/app/rest/server"
 )
 
 const (
 	concurrentRequestLimit = 1000
-	shutdownTimeout        = 60 * time.Second
+	serverShutdownTimeout  = 60 * time.Second
 )
-
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-
-type healthCheck struct{}
-
-func (*healthCheck) healthz(w http.ResponseWriter, _ *http.Request) {
-	w.WriteHeader(http.StatusOK)
-}
-
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
 
 func main() {
 	cfg := cfg.Parse()
+
+	// connect to grpc
+	grpcConn, err := grpc.Dial(cfg.MathAddr, grpc.WithInsecure())
+	xos.FailOnError(err, "failed to connect to grpc")
+	defer grpcConn.Close()
 
 	// config the http router
 	router := chi.NewRouter()
 	xchi.UseDefaultMiddleware(router)
 	xchi.UseThrottle(router, concurrentRequestLimit)
 
-	// handle requests
-	srv := server.RestServer{Cfg: cfg}
-	srv.Route(router)
+	// handle health check requests
+	var health xhttp.HealthServer
+	router.Get("/healthz", health.Check)
 
-	// run the http server
-	var healthCheck healthCheck
-	router.Get("/healthz", healthCheck.healthz)
-	xhttp.ListenAndServe(cfg.Addr, router, shutdownTimeout)
+	// handle requests
+	rest := server.NewRestServer(grpcConn)
+	rest.Route(router)
+
+	// start the http server and schedule a stop
+	srv := xhttp.NewServer(cfg.Addr, router)
+	srv.ListenAndServeAsync()
+	defer srv.StopGracefully(serverShutdownTimeout)
+
+	// wait for a program exit to stop the http server
+	xos.WaitForExit()
 }
