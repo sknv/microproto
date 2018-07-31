@@ -17,16 +17,27 @@ import (
 )
 
 type RestServer struct {
+	// consulClient *xconsul.Client
 	mathClient math.MathClient
 }
 
 func NewRestServer(grpcConn *grpc.ClientConn) *RestServer {
-	return &RestServer{mathClient: math.NewMathClient(grpcConn)}
+	// consulClient, err := xconsul.NewClient(config.ConsulAddr)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "failed to create a rest server")
+	// }
+
+	return &RestServer{
+		// consulClient: consulClient,
+		mathClient: math.NewMathClient(grpcConn),
+	}
 }
 
 func (s *RestServer) Route(router chi.Router) {
-	router.Get("/math/rect", s.Rect)
-	router.Get("/math/circle", s.Circle)
+	router.Route("/math", func(r chi.Router) {
+		r.Get("/rect", s.Rect)
+		r.Get("/circle", s.Circle)
+	})
 }
 
 func (s *RestServer) Rect(w http.ResponseWriter, r *http.Request) {
