@@ -32,8 +32,7 @@ func main() {
 	xchi.UseThrottle(router, concurrentRequestLimit)
 
 	// handle requests
-	rest, err := server.NewRestServer(cfg, grpcConn)
-	xos.FailOnError(err, "failed to start the rest server")
+	rest := server.NewRestServer(grpcConn)
 	rest.Route(router)
 
 	// handle health check requests
