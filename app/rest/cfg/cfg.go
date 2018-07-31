@@ -7,9 +7,9 @@ import (
 )
 
 type Config struct {
-	Addr       string `long:"rest-addr" env:"REST_ADDR" default:"localhost:8080" description:"rest api address"`
-	MathAddr   string `long:"math-addr" env:"MATH_ADDR" default:"localhost:8081" description:"math service address"`
-	ConsulAddr string `long:"consul-addr" env:"CONSUL_ADDR" default:"localhost:8500" description:"consul service"`
+	Addr    string `long:"rest-addr" env:"REST_ADDR" default:"localhost:8080" description:"rest api address"`
+	MathURL string `long:"math-url" env:"MATH_URL" default:"http://localhost:8081" description:"math service url"`
+	// ConsulAddr string `long:"consul-addr" env:"CONSUL_ADDR" default:"localhost:8500" description:"consul service"`
 }
 
 func Parse() *Config {

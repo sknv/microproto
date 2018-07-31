@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi"
-	"google.golang.org/grpc"
 
 	"github.com/sknv/microproto/app/lib/xchi"
 	"github.com/sknv/microproto/app/lib/xhttp"
@@ -21,18 +20,13 @@ const (
 func main() {
 	cfg := cfg.Parse()
 
-	// connect to grpc
-	grpcConn, err := grpc.Dial(cfg.MathAddr, grpc.WithInsecure())
-	xos.FailOnError(err, "failed to connect to grpc")
-	defer grpcConn.Close()
-
 	// config the http router
 	router := chi.NewRouter()
 	xchi.UseDefaultMiddleware(router)
 	xchi.UseThrottle(router, concurrentRequestLimit)
 
 	// handle requests
-	rest := server.NewRestServer(grpcConn)
+	rest := server.NewRestServer(cfg)
 	rest.Route(router)
 
 	// handle health check requests

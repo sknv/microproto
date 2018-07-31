@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-// protoc --go_out=plugins=grpc:. *.proto
+// protoc --go_out=. --twirp_out=. *.proto
 
 package rpc;
 
@@ -24,6 +24,6 @@ message CircleReply {
 }
 
 service Math {
-  rpc Rect(RectArgs) returns (RectReply) {}
-  rpc Circle(CircleArgs) returns (CircleReply) {}
+  rpc Rect(RectArgs) returns (RectReply);
+  rpc Circle(CircleArgs) returns (CircleReply);
 }

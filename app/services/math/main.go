@@ -1,14 +1,11 @@
 package main
 
 import (
-	"fmt"
-	"net"
-	"net/http"
 	"time"
 
-	"google.golang.org/grpc"
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
 
-	"github.com/sknv/microproto/app/lib/xgrpc"
 	"github.com/sknv/microproto/app/lib/xhttp"
 	"github.com/sknv/microproto/app/lib/xos"
 	"github.com/sknv/microproto/app/services/math/cfg"
@@ -24,53 +21,31 @@ const (
 func main() {
 	cfg := cfg.Parse()
 
-	// start the grpc server and schedule a stop
-	grpcSrv := startGrpcServerAsync(cfg)
-	defer grpcSrv.StopGracefully(serverShutdownTimeout)
+	// config the http router
+	router := chi.NewRouter()
+	router.Use(middleware.RealIP, middleware.Logger)
 
-	// connect to grpc
-	grpcConn, err := grpc.Dial(cfg.Addr, grpc.WithInsecure())
-	xos.FailOnError(err, "failed to connect to grpc")
-	defer grpcConn.Close()
+	// handle requests
+	var math internal.MathServer
+	twirpHandler := rpc.NewMathServer(&math, nil)
+	router.Mount(rpc.MathPathPrefix, twirpHandler)
 
-	// start the health check server and schedule a stop
-	healthSrv := startHealthServerAsync(cfg, grpcConn)
-	defer healthSrv.StopGracefully(serverShutdownTimeout)
+	// handle health check requests
+	var health xhttp.HealthServer
+	router.Get("/healthz", health.Check)
+
+	// start the http server and schedule a stop
+	srv := xhttp.NewServer(cfg.Addr, router)
+	srv.ListenAndServeAsync()
+	defer srv.StopGracefully(serverShutdownTimeout)
 
 	// register current service in consul and schedule a deregistration
 	//
 	// consulClient := registerConsulService(cfg)
 	// defer deregisterConsulService(consulClient)
 
-	// wait for a program exit to stop the health and grpc servers
+	// wait for a program exit to stop the http server
 	xos.WaitForExit()
-}
-
-func startGrpcServerAsync(config *cfg.Config) *xgrpc.Server {
-	// listen on the specified address
-	lis, err := net.Listen("tcp", config.Addr)
-	xos.FailOnError(err, fmt.Sprintf("failed to listen on %s", config.Addr))
-
-	// handle grpc requests
-	srv := xgrpc.NewServer()
-	rpc.RegisterMathServer(srv.Server, &internal.MathServer{})
-	xgrpc.RegisterHealthServer(srv.Server) // handle grpc health check requests
-
-	// start the grpc server
-	srv.ServeAsync(lis)
-	return srv
-}
-
-func startHealthServerAsync(config *cfg.Config, grpcConn *grpc.ClientConn) *xhttp.Server {
-	// handle health check requests via http 1.1
-	router := http.NewServeMux()
-	health := xgrpc.NewHealthServer(grpcConn)
-	router.HandleFunc("/healthz", health.Check)
-
-	// start the http 1.1 health check server
-	srv := xhttp.NewServer(config.HealthAddr, router)
-	srv.ListenAndServeAsync()
-	return srv
 }
 
 // consul section

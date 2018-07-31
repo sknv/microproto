@@ -8,20 +8,19 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/render"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/status"
+	"github.com/twitchtv/twirp"
 
-	"github.com/sknv/microproto/app/lib/xgrpc"
 	"github.com/sknv/microproto/app/lib/xhttp"
+	"github.com/sknv/microproto/app/rest/cfg"
 	math "github.com/sknv/microproto/app/services/math/rpc"
 )
 
 type RestServer struct {
 	// consulClient *xconsul.Client
-	mathClient math.MathClient
+	mathClient math.Math
 }
 
-func NewRestServer(grpcConn *grpc.ClientConn) *RestServer {
+func NewRestServer(config *cfg.Config) *RestServer {
 	// consulClient, err := xconsul.NewClient(config.ConsulAddr)
 	// if err != nil {
 	// 	return nil, errors.Wrap(err, "failed to create a rest server")
@@ -29,7 +28,7 @@ func NewRestServer(grpcConn *grpc.ClientConn) *RestServer {
 
 	return &RestServer{
 		// consulClient: consulClient,
-		mathClient: math.NewMathClient(grpcConn),
+		mathClient: math.NewMathProtobufClient(config.MathURL, &http.Client{}),
 	}
 }
 
@@ -85,12 +84,12 @@ func abortOnError(w http.ResponseWriter, err error) {
 		return
 	}
 
-	gerr, _ := status.FromError(err)
-	status := xgrpc.HTTPStatusFromCode(gerr.Code())
+	terr := err.(twirp.Error)
+	status := twirp.ServerHTTPStatusFromErrorCode(terr.Code())
 	if status != http.StatusInternalServerError {
-		log.Print("[ERROR] ", gerr.Message())
-		http.Error(w, gerr.Message(), status)
+		log.Print("[ERROR] abort on error: ", terr)
+		http.Error(w, terr.Msg(), status)
 		xhttp.AbortHandler()
 	}
-	panic(gerr)
+	panic(terr)
 }

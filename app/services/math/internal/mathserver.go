@@ -4,17 +4,16 @@ import (
 	"context"
 	"math"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"github.com/twitchtv/twirp"
 
 	"github.com/sknv/microproto/app/services/math/rpc"
 )
 
 type MathServer struct{}
 
-func (s *MathServer) Rect(_ context.Context, args *rpc.RectArgs) (*rpc.RectReply, error) {
+func (*MathServer) Rect(_ context.Context, args *rpc.RectArgs) (*rpc.RectReply, error) {
 	if args.Width <= 0 || args.Height <= 0 {
-		return nil, status.Error(codes.InvalidArgument, "width and height must be positive numbers")
+		return nil, twirp.InvalidArgumentError("width and height", "must be positive numbers")
 	}
 
 	return &rpc.RectReply{
@@ -23,9 +22,9 @@ func (s *MathServer) Rect(_ context.Context, args *rpc.RectArgs) (*rpc.RectReply
 	}, nil
 }
 
-func (s *MathServer) Circle(_ context.Context, args *rpc.CircleArgs) (*rpc.CircleReply, error) {
+func (*MathServer) Circle(_ context.Context, args *rpc.CircleArgs) (*rpc.CircleReply, error) {
 	if args.Radius <= 0 {
-		return nil, status.Error(codes.InvalidArgument, "radius must be a positive number")
+		return nil, twirp.InvalidArgumentError("radius", "must be a positive number")
 	}
 
 	return &rpc.CircleReply{
