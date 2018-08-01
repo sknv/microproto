@@ -88,7 +88,7 @@ func abortOnError(w http.ResponseWriter, err error) {
 	gerr, _ := status.FromError(err)
 	status := xgrpc.HTTPStatusFromCode(gerr.Code())
 	if status != http.StatusInternalServerError {
-		log.Print("[ERROR] ", gerr.Message())
+		log.Print("[ERROR] abort on error: ", gerr.Err())
 		http.Error(w, gerr.Message(), status)
 		xhttp.AbortHandler()
 	}

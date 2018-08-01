@@ -11,8 +11,6 @@ package xconsul
 
 // type Client struct {
 // 	*consul.Client
-
-// 	serviceID string
 // }
 
 // func NewClient(consulAddr string) (*Client, error) {
@@ -25,33 +23,33 @@ package xconsul
 // 	return &Client{Client: client}, nil
 // }
 
-// func (c *Client) RegisterService(addr, serviceName string) error {
+// func (c *Client) RegisterService(addr, serviceName string) (string, error) {
 // 	addrs := strings.Split(addr, ":")
 // 	if len(addrs) != 2 {
-// 		return errors.Errorf("incorrect address format: %s", addr)
+// 		return "", errors.Errorf("incorrect address format: %s", addr)
 // 	}
 
 // 	host := addrs[0]
 // 	port, err := strconv.Atoi(addrs[1])
 // 	if err != nil {
-// 		return err
+// 		return "", err
 // 	}
 
-// 	c.serviceID = fmt.Sprintf("%s__%s:%d", serviceName, host, port)
+// 	serviceID := fmt.Sprintf("%s__%s:%d", serviceName, host, port)
 // 	service := consul.AgentServiceRegistration{
-// 		ID:      c.serviceID,
+// 		ID:      serviceID,
 // 		Name:    serviceName,
 // 		Address: host,
 // 		Port:    port,
 // 	}
-// 	return c.Agent().ServiceRegister(&service)
+// 	return serviceID, c.Agent().ServiceRegister(&service)
 // }
 
-// func (c *Client) DeregisterService() error {
-// 	return c.Agent().ServiceDeregister(c.serviceID)
+// func (c *Client) DeregisterService(serviceID string) error {
+// 	return c.Agent().ServiceDeregister(serviceID)
 // }
 
-// func (c *Client) GetServices(service string) ([]*consul.ServiceEntry, *consul.QueryMeta, error) {
+// func (c *Client) Service(service string) ([]*consul.ServiceEntry, *consul.QueryMeta, error) {
 // 	addrs, meta, err := c.Health().Service(service, "", true, nil)
 // 	if err != nil {
 // 		return nil, nil, errors.Wrap(err, "failed to get services")
