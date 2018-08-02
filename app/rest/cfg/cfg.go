@@ -3,7 +3,7 @@ package cfg
 import (
 	"os"
 
-	flags "github.com/jessevdk/go-flags"
+	"github.com/sknv/microproto/app/lib/xflags"
 )
 
 type Config struct {
@@ -14,8 +14,7 @@ type Config struct {
 
 func Parse() *Config {
 	var cfg Config
-	flagParser := flags.NewParser(&cfg, flags.Default)
-	if _, err := flagParser.ParseArgs(os.Args[1:]); err != nil {
+	if _, err := xflags.ParseArgs(os.Args[1:], &cfg); err != nil {
 		os.Exit(1)
 	}
 	return &cfg

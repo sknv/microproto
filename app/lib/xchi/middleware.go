@@ -8,12 +8,12 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 
-	lib "github.com/sknv/microproto/app/lib/middleware"
+	"github.com/sknv/microproto/app/lib/xmiddleware"
 )
 
 func UseDefaultMiddleware(router chi.Router) {
 	router.Use(
-		middleware.RealIP, middleware.Logger, middleware.Recoverer, lib.Recoverer,
+		middleware.RealIP, middleware.Logger, middleware.Recoverer, xmiddleware.Recoverer,
 	)
 }
 

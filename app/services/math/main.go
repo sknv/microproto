@@ -3,13 +3,9 @@ package main
 import (
 	"fmt"
 	"net"
-	"net/http"
 	"time"
 
-	"google.golang.org/grpc"
-
 	"github.com/sknv/microproto/app/lib/xgrpc"
-	"github.com/sknv/microproto/app/lib/xhttp"
 	"github.com/sknv/microproto/app/lib/xos"
 	"github.com/sknv/microproto/app/services/math/cfg"
 	"github.com/sknv/microproto/app/services/math/internal"
@@ -28,14 +24,16 @@ func main() {
 	grpcSrv := startGrpcServerAsync(cfg)
 	defer grpcSrv.StopGracefully(serverShutdownTimeout)
 
-	// connect to grpc
-	grpcConn, err := grpc.Dial(cfg.Addr, grpc.WithInsecure())
-	xos.FailOnError(err, "failed to connect to grpc")
-	defer grpcConn.Close()
+	// http 1.1 health server section
+	//
+	// // connect to grpc
+	// grpcConn, err := grpc.Dial(cfg.Addr, grpc.WithInsecure())
+	// xos.FailOnError(err, "failed to connect to grpc")
+	// defer grpcConn.Close()
 
-	// start the health check server and schedule a stop
-	healthSrv := startHealthServerAsync(cfg, grpcConn)
-	defer healthSrv.StopGracefully(serverShutdownTimeout)
+	// // start the health check server and schedule a stop
+	// healthSrv := startHealthServerAsync(cfg, grpcConn)
+	// defer healthSrv.StopGracefully(serverShutdownTimeout)
 
 	// register current service in consul and schedule a deregistration
 	//
@@ -61,17 +59,19 @@ func startGrpcServerAsync(config *cfg.Config) *xgrpc.Server {
 	return srv
 }
 
-func startHealthServerAsync(config *cfg.Config, grpcConn *grpc.ClientConn) *xhttp.Server {
-	// handle health check requests via http 1.1
-	router := http.NewServeMux()
-	health := xgrpc.NewHealthServer(grpcConn)
-	router.HandleFunc("/healthz", health.Check)
+// http 1.1 health server section
+//
+// func startHealthServerAsync(config *cfg.Config, grpcConn *grpc.ClientConn) *xhttp.Server {
+// 	// handle health check requests via http 1.1
+// 	router := http.NewServeMux()
+// 	health := xgrpc.NewHealthServer(grpcConn)
+// 	router.HandleFunc("/healthz", health.Check)
 
-	// start the http 1.1 health check server
-	srv := xhttp.NewServer(config.HealthAddr, router)
-	srv.ListenAndServeAsync()
-	return srv
-}
+// 	// start the http 1.1 health check server
+// 	srv := xhttp.NewServer(config.HealthAddr, router)
+// 	srv.ListenAndServeAsync()
+// 	return srv
+// }
 
 // consul section
 //
