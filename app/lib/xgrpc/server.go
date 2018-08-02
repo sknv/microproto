@@ -30,18 +30,19 @@ func (s *Server) ServeAsync(listener net.Listener) {
 func (s *Server) StopGracefully(shutdownTimeout time.Duration) {
 	log.Print("[INFO] stopping the grpc server...")
 
-	// wait for a graceful shutdown and then stop the server forcibly
-	shutdownTimer := time.NewTimer(shutdownTimeout)
+	// try to stop the server gracefuly
+	serverStoppedGracefuly := make(chan struct{})
 	go func() {
-		<-shutdownTimer.C
-		s.Stop()
-		log.Print("[WARN] grpc server forcibly stopped")
+		s.GracefulStop()
+		serverStoppedGracefuly <- struct{}{}
 	}()
 
-	// try to stop the server gracefuly
-	s.GracefulStop()
-	serverStoppedGracefuly := shutdownTimer.Stop()
-	if serverStoppedGracefuly {
+	// wait for a graceful shutdown and then stop the server forcibly
+	select {
+	case <-serverStoppedGracefuly:
 		log.Print("[INFO] grpc server gracefully stopped")
+	case <-time.After(shutdownTimeout):
+		s.Stop()
+		log.Print("[WARN] grpc server forcibly stopped")
 	}
 }
