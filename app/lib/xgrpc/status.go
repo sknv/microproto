@@ -45,6 +45,6 @@ func HTTPStatusFromCode(code codes.Code) int {
 		return http.StatusInternalServerError
 	}
 
-	log.Print("[ERROR] unknown grpc error code: ", code)
+	log.Print("[ERROR] unknown grpc status code: ", code)
 	return http.StatusInternalServerError
 }
