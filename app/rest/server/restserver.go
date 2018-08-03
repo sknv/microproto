@@ -85,12 +85,14 @@ func abortOnError(w http.ResponseWriter, err error) {
 		return
 	}
 
+	log.Print("[ERROR] abort on error: ", err)
+
+	// process as a grpc error
 	gerr, _ := status.FromError(err)
 	status := xgrpc.HTTPStatusFromCode(gerr.Code())
 	if status != http.StatusInternalServerError {
-		log.Print("[ERROR] abort on error: ", gerr.Err())
 		http.Error(w, gerr.Message(), status)
 		xhttp.AbortHandler()
 	}
-	panic(gerr)
+	xhttp.AbortHandlerWithInternalError(w)
 }
