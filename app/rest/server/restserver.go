@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/render"
@@ -49,7 +50,11 @@ func (s *RestServer) Rect(w http.ResponseWriter, r *http.Request) {
 		Height: height,
 	}
 
-	reply, err := s.mathClient.Rect(context.Background(), &args)
+	// set the reply timeout
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	reply, err := s.mathClient.Rect(ctx, &args)
 	abortOnError(w, err)
 	render.JSON(w, r, reply)
 }
@@ -61,7 +66,11 @@ func (s *RestServer) Circle(w http.ResponseWriter, r *http.Request) {
 		Radius: radius,
 	}
 
-	reply, err := s.mathClient.Circle(context.Background(), &args)
+	// set the reply timeout
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	reply, err := s.mathClient.Circle(ctx, &args)
 	abortOnError(w, err)
 	render.JSON(w, r, reply)
 }
