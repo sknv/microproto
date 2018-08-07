@@ -7,9 +7,9 @@ import (
 
 	"github.com/sknv/microproto/app/lib/xgrpc"
 	"github.com/sknv/microproto/app/lib/xos"
-	"github.com/sknv/microproto/app/services/math/cfg"
-	"github.com/sknv/microproto/app/services/math/internal"
-	"github.com/sknv/microproto/app/services/math/rpc"
+	"github.com/sknv/microproto/app/math/cfg"
+	"github.com/sknv/microproto/app/math/internal"
+	"github.com/sknv/microproto/app/math/rpc"
 )
 
 const (

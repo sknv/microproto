@@ -14,7 +14,7 @@ import (
 
 	"github.com/sknv/microproto/app/lib/xgrpc"
 	"github.com/sknv/microproto/app/lib/xhttp"
-	math "github.com/sknv/microproto/app/services/math/rpc"
+	math "github.com/sknv/microproto/app/math/rpc"
 )
 
 type RestServer struct {

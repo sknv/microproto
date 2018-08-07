@@ -7,7 +7,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/sknv/microproto/app/services/math/rpc"
+	"github.com/sknv/microproto/app/math/rpc"
 )
 
 type MathServer struct{}
