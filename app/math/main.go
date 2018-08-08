@@ -8,8 +8,8 @@ import (
 	"github.com/sknv/microproto/app/lib/xgrpc"
 	"github.com/sknv/microproto/app/lib/xos"
 	"github.com/sknv/microproto/app/math/cfg"
-	"github.com/sknv/microproto/app/math/internal"
 	"github.com/sknv/microproto/app/math/rpc"
+	"github.com/sknv/microproto/app/math/server"
 )
 
 const (
@@ -51,7 +51,7 @@ func startGrpcServerAsync(config *cfg.Config) *xgrpc.Server {
 
 	// handle grpc requests
 	srv := xgrpc.NewServer()
-	rpc.RegisterMathServer(srv.Server, &internal.MathServer{})
+	rpc.RegisterMathServer(srv.Server, &server.MathServer{})
 	xgrpc.RegisterHealthServer(srv.Server) // handle grpc health check requests
 
 	// start the grpc server
