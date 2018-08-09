@@ -1,58 +1,55 @@
 package xconsul
 
-// import (
-// 	"fmt"
-// 	"strconv"
-// 	"strings"
+import (
+	"fmt"
+	"net"
+	"strconv"
 
-// 	consul "github.com/hashicorp/consul/api"
-// 	"github.com/pkg/errors"
-// )
+	consul "github.com/hashicorp/consul/api"
+	"github.com/pkg/errors"
+)
 
-// type Client struct {
-// 	*consul.Client
-// }
+type Client struct {
+	*consul.Client
 
-// func NewClient(consulAddr string) (*Client, error) {
-// 	config := consul.DefaultConfig()
-// 	config.Address = consulAddr
-// 	client, err := consul.NewClient(config)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return &Client{Client: client}, nil
-// }
+	currentServiceID string
+}
 
-// func (c *Client) RegisterService(addr, serviceName string) (string, error) {
-// 	addrs := strings.Split(addr, ":")
-// 	if len(addrs) != 2 {
-// 		return "", errors.Errorf("incorrect address format: %s", addr)
-// 	}
+func NewClient(consulAddr string) (*Client, error) {
+	config := consul.DefaultConfig()
+	config.Address = consulAddr
+	client, err := consul.NewClient(config)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to connect to consul")
+	}
+	return &Client{Client: client}, nil
+}
 
-// 	host := addrs[0]
-// 	port, err := strconv.Atoi(addrs[1])
-// 	if err != nil {
-// 		return "", err
-// 	}
+func (c *Client) RegisterCurrentService(addr, name string, healthCheck *consul.AgentServiceCheck) error {
+	host, sport, err := net.SplitHostPort(addr)
+	if err != nil {
+		return errors.WithMessage(err, "failed to split host and port")
+	}
 
-// 	serviceID := fmt.Sprintf("%s__%s:%d", serviceName, host, port)
-// 	service := consul.AgentServiceRegistration{
-// 		ID:      serviceID,
-// 		Name:    serviceName,
-// 		Address: host,
-// 		Port:    port,
-// 	}
-// 	return serviceID, c.Agent().ServiceRegister(&service)
-// }
+	port, err := strconv.Atoi(sport)
+	if err != nil {
+		return errors.WithMessage(err, "failed to parse the service port")
+	}
 
-// func (c *Client) DeregisterService(serviceID string) error {
-// 	return c.Agent().ServiceDeregister(serviceID)
-// }
+	c.currentServiceID = fmt.Sprintf("%s__%s:%d", name, host, port)
+	service := consul.AgentServiceRegistration{
+		ID:      c.currentServiceID,
+		Name:    name,
+		Address: host,
+		Port:    port,
+		Check:   healthCheck,
+	}
+	if err = c.Agent().ServiceRegister(&service); err != nil {
+		return errors.WithMessage(err, "failed to register service "+name)
+	}
+	return nil
+}
 
-// func (c *Client) Service(service string) ([]*consul.ServiceEntry, *consul.QueryMeta, error) {
-// 	addrs, meta, err := c.Health().Service(service, "", true, nil)
-// 	if err != nil {
-// 		return nil, nil, errors.Wrap(err, "failed to get services")
-// 	}
-// 	return addrs, meta, nil
-// }
+func (c *Client) DeregisterCurrentService() error {
+	return c.Agent().ServiceDeregister(c.currentServiceID)
+}

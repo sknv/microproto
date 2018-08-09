@@ -18,20 +18,11 @@ import (
 )
 
 type RestServer struct {
-	// consulClient *xconsul.Client
 	mathClient math.MathClient
 }
 
 func NewRestServer(grpcConn *grpc.ClientConn) *RestServer {
-	// consulClient, err := xconsul.NewClient(config.ConsulAddr)
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, "failed to create a rest server")
-	// }
-
-	return &RestServer{
-		// consulClient: consulClient,
-		mathClient: math.NewMathClient(grpcConn),
-	}
+	return &RestServer{mathClient: math.NewMathClient(grpcConn)}
 }
 
 func (s *RestServer) Route(router chi.Router) {

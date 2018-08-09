@@ -18,11 +18,11 @@ func NewServer() *Server {
 }
 
 func (s *Server) ServeAsync(listener net.Listener) {
-	log.Print("[INFO] starting a grpc server on ", listener.Addr())
+	log.Print("[INFO] starting the grpc server on ", listener.Addr())
 	go func() {
 		if err := s.Serve(listener); err != nil {
 			// cannot panic, because this probably is an intentional close
-			log.Print("[ERROR] failed to serve a grpc server: ", err)
+			log.Print("[ERROR] failed to serve the grpc server: ", err)
 		}
 	}()
 }

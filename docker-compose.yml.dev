@@ -2,11 +2,12 @@ version: '3.5'
 
 services:
   consul:
-    image: consul:1.2.1
-    command: agent -client 0.0.0.0 -dev -ui
-    hostname: node1
+    image: consul:1.2.2
+    command: agent -dev -ui -client 0.0.0.0
+    hostname: node-1
+    network_mode: host # allow health checks in development
     ports:
-      - 8300:8300 # rpc port
-      - 8500:8500 # http api port
-      - 8600:8600 # dns server port
+      - 8300:8300 # consul rpc port
+      - 8500:8500 # consul http api port
+      - 8600:8600 # consul dns server port
     restart: unless-stopped

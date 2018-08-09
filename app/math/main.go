@@ -1,10 +1,13 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"net"
 	"time"
 
+	consul "github.com/hashicorp/consul/api"
+
+	"github.com/sknv/microproto/app/lib/xconsul"
 	"github.com/sknv/microproto/app/lib/xgrpc"
 	"github.com/sknv/microproto/app/lib/xos"
 	"github.com/sknv/microproto/app/math/cfg"
@@ -14,87 +17,66 @@ import (
 
 const (
 	serverShutdownTimeout = 60 * time.Second
-	// serviceName           = "math"
+
+	serviceName         = "math"
+	healthCheckInterval = "10s"
+	healthCheckTimeout  = "1s"
 )
 
 func main() {
 	cfg := cfg.Parse()
 
-	// start the grpc server and schedule a stop
-	grpcSrv := startGrpcServerAsync(cfg)
-	defer grpcSrv.StopGracefully(serverShutdownTimeout)
-
-	// http 1.1 health server section
-	//
-	// // connect to grpc
-	// grpcConn, err := grpc.Dial(cfg.Addr, grpc.WithInsecure())
-	// xos.FailOnError(err, "failed to connect to grpc")
-	// defer grpcConn.Close()
-
-	// // start the health check server and schedule a stop
-	// healthSrv := startHealthServerAsync(cfg, grpcConn)
-	// defer healthSrv.StopGracefully(serverShutdownTimeout)
-
-	// register current service in consul and schedule a deregistration
-	//
-	// consulClient := registerConsulService(cfg)
-	// defer deregisterConsulService(consulClient)
-
-	// wait for a program exit to stop the health and grpc servers
-	xos.WaitForExit()
-}
-
-func startGrpcServerAsync(config *cfg.Config) *xgrpc.Server {
 	// listen on the specified address
-	lis, err := net.Listen("tcp", config.Addr)
-	xos.FailOnError(err, fmt.Sprintf("failed to listen on %s", config.Addr))
+	lis, err := net.Listen("tcp", cfg.Addr)
+	xos.FailOnError(err, "failed to listen on "+cfg.Addr)
 
 	// handle grpc requests
 	srv := xgrpc.NewServer()
 	rpc.RegisterMathServer(srv.Server, &server.MathServer{})
 	xgrpc.RegisterHealthServer(srv.Server) // handle grpc health check requests
 
-	// start the grpc server
+	// start the grpc server and schedule a stop
 	srv.ServeAsync(lis)
-	return srv
+	defer srv.StopGracefully(serverShutdownTimeout)
+
+	// register current service in consul and schedule a deregistration
+	consulClient := registerConsulService(cfg)
+	defer deregisterConsulService(consulClient)
+
+	// wait for a program exit to stop the health and grpc servers
+	xos.WaitForExit()
 }
 
-// http 1.1 health server section
-//
-// func startHealthServerAsync(config *cfg.Config, grpcConn *grpc.ClientConn) *xhttp.Server {
-// 	// handle health check requests via http 1.1
-// 	router := http.NewServeMux()
-// 	health := xgrpc.NewHealthServer(grpcConn)
-// 	router.HandleFunc("/healthz", health.Check)
-
-// 	// start the http 1.1 health check server
-// 	srv := xhttp.NewServer(config.HealthAddr, router)
-// 	srv.ListenAndServeAsync()
-// 	return srv
-// }
-
+// ----------------------------------------------------------------------------
 // consul section
-//
-// func registerConsulService(config *cfg.Config) *xconsul.Client {
-// 	consulClient, err := xconsul.NewClient(config.ConsulAddr)
-// 	if err != nil {
-// 		log.Print("[ERROR] failed to connect to consul: ", err)
-// 		return nil
-// 	}
+// ----------------------------------------------------------------------------
 
-// 	if err = consulClient.RegisterService(config.Addr, serviceName); err != nil {
-// 		log.Print("[ERROR] failed to register current service: ", err)
-// 		return nil
-// 	}
-// 	return consulClient
-// }
+func registerConsulService(config *cfg.Config) *xconsul.Client {
+	consulClient, err := xconsul.NewClient(config.ConsulAddr)
+	if err != nil {
+		log.Print("[ERROR] failed to connect to consul: ", err)
+		return nil
+	}
 
-// func deregisterConsulService(consulClient *xconsul.Client) {
-// 	if consulClient == nil {
-// 		return
-// 	}
+	healthCheck := &consul.AgentServiceCheck{
+		Name:     "math service health check",
+		GRPC:     config.Addr,
+		Interval: healthCheckInterval,
+		Timeout:  healthCheckTimeout,
+	}
+	if err = consulClient.RegisterCurrentService(config.Addr, serviceName, healthCheck); err != nil {
+		log.Print("[ERROR] failed to register current service: ", err)
+		return nil
+	}
+	return consulClient
+}
 
-// 	if err := consulClient.DeregisterService(); err != nil {
-// 		log.Print("[ERROR] failed to deregister current service: ", err)
-// 	}
-// }
+func deregisterConsulService(consulClient *xconsul.Client) {
+	if consulClient == nil {
+		return
+	}
+
+	if err := consulClient.DeregisterCurrentService(); err != nil {
+		log.Print("[ERROR] failed to deregister current service: ", err)
+	}
+}
