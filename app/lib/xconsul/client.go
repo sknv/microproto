@@ -25,7 +25,7 @@ func NewClient(consulAddr string) (*Client, error) {
 	return &Client{Client: client}, nil
 }
 
-func (c *Client) RegisterCurrentService(addr, name string, healthCheck *consul.AgentServiceCheck) error {
+func (c *Client) RegisterCurrentService(addr, name string, healthChecks consul.AgentServiceChecks) error {
 	host, sport, err := net.SplitHostPort(addr)
 	if err != nil {
 		return errors.WithMessage(err, "failed to split host and port")
@@ -42,7 +42,7 @@ func (c *Client) RegisterCurrentService(addr, name string, healthCheck *consul.A
 		Name:    name,
 		Address: host,
 		Port:    port,
-		Check:   healthCheck,
+		Checks:  healthChecks,
 	}
 	if err = c.Agent().ServiceRegister(&service); err != nil {
 		return errors.WithMessage(err, "failed to register service "+name)

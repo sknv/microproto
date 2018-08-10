@@ -6,6 +6,7 @@ import (
 	"time"
 
 	consul "github.com/hashicorp/consul/api"
+	"google.golang.org/grpc"
 
 	"github.com/sknv/microproto/app/lib/xconsul"
 	"github.com/sknv/microproto/app/lib/xgrpc"
@@ -31,7 +32,7 @@ func main() {
 	xos.FailOnError(err, "failed to listen on "+cfg.Addr)
 
 	// handle grpc requests
-	srv := xgrpc.NewServer()
+	srv := xgrpc.NewServer(grpc.UnaryInterceptor(xgrpc.WithLogger))
 	rpc.RegisterMathServer(srv.Server, &server.MathServer{})
 	xgrpc.RegisterHealthServer(srv.Server) // handle grpc health check requests
 
@@ -64,7 +65,9 @@ func registerConsulService(config *cfg.Config) *xconsul.Client {
 		Interval: healthCheckInterval,
 		Timeout:  healthCheckTimeout,
 	}
-	if err = consulClient.RegisterCurrentService(config.Addr, serviceName, healthCheck); err != nil {
+	if err = consulClient.RegisterCurrentService(
+		config.Addr, serviceName, consul.AgentServiceChecks{healthCheck},
+	); err != nil {
 		log.Print("[ERROR] failed to register current service: ", err)
 		return nil
 	}

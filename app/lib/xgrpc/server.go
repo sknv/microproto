@@ -12,8 +12,8 @@ type Server struct {
 	*grpc.Server
 }
 
-func NewServer() *Server {
-	srv := grpc.NewServer()
+func NewServer(opts ...grpc.ServerOption) *Server {
+	srv := grpc.NewServer(opts...)
 	return &Server{Server: srv}
 }
 

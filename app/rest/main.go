@@ -21,6 +21,7 @@ const (
 	serverShutdownTimeout  = 60 * time.Second
 
 	serviceName         = "rest"
+	protocol            = "http://"
 	healthCheckURL      = "/healthz"
 	healthCheckInterval = "10s"
 	healthCheckTimeout  = "1s"
@@ -73,11 +74,13 @@ func registerConsulService(config *cfg.Config) *xconsul.Client {
 
 	healthCheck := &consul.AgentServiceCheck{
 		Name:     "rest api health check",
-		HTTP:     "http://" + config.Addr + healthCheckURL,
+		HTTP:     protocol + config.Addr + healthCheckURL,
 		Interval: healthCheckInterval,
 		Timeout:  healthCheckTimeout,
 	}
-	if err = consulClient.RegisterCurrentService(config.Addr, serviceName, healthCheck); err != nil {
+	if err = consulClient.RegisterCurrentService(
+		config.Addr, serviceName, consul.AgentServiceChecks{healthCheck},
+	); err != nil {
 		log.Print("[ERROR] failed to register current service: ", err)
 		return nil
 	}
