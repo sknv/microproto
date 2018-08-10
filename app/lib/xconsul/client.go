@@ -53,3 +53,11 @@ func (c *Client) RegisterCurrentService(addr, name string, healthCheck *consul.A
 func (c *Client) DeregisterCurrentService() error {
 	return c.Agent().ServiceDeregister(c.currentServiceID)
 }
+
+func (c *Client) Service(service string) ([]*consul.ServiceEntry, *consul.QueryMeta, error) {
+	addrs, meta, err := c.Health().Service(service, "", true, nil)
+	if err != nil {
+		return nil, nil, errors.WithMessage(err, "failed to get services")
+	}
+	return addrs, meta, nil
+}
