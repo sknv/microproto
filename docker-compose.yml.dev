@@ -4,8 +4,12 @@ services:
   consul:
     image: consul:1.2.2
     command: agent -dev -ui -client=0.0.0.0 -log-level=info
-    hostname: node-1
     network_mode: host
-    ports:
-      - 8500:8500 # consul http api port
+    restart: unless-stopped
+
+  fabio:
+    image: fabiolb/fabio:1.5.9-go1.10.2
+    network_mode: host
+    volumes:
+      - ./fabio/fabio.properties:/etc/fabio/fabio.properties
     restart: unless-stopped

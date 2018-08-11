@@ -7,7 +7,7 @@ import (
 )
 
 type Config struct {
-	Addr          string `long:"rest-addr" env:"REST_ADDR" default:"localhost:8080" description:"rest api address"`
+	Addr          string `long:"rest-addr" env:"REST_ADDR" default:":8080" description:"rest api address"`
 	ConsulAddr    string `long:"consul-addr" env:"CONSUL_ADDR" default:"localhost:8500" description:"consul address"`
 	MathProxyAddr string `long:"math-proxy-addr" env:"MATH_PROXY_ADDR" default:"localhost:8001" description:"math services proxy address"`
 }

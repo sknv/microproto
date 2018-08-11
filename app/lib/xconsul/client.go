@@ -7,6 +7,8 @@ import (
 
 	consul "github.com/hashicorp/consul/api"
 	"github.com/pkg/errors"
+
+	"github.com/sknv/microproto/app/lib/xnet"
 )
 
 type Client struct {
@@ -26,7 +28,12 @@ func NewClient(consulAddr string) (*Client, error) {
 }
 
 func (c *Client) RegisterCurrentService(addr, name string, tags []string, healthChecks consul.AgentServiceChecks) error {
-	host, portstr, err := net.SplitHostPort(addr)
+	localIP, err := xnet.LocalIP()
+	if err != nil {
+		return errors.WithMessage(err, "failed to get local ip address")
+	}
+
+	_, portstr, err := net.SplitHostPort(addr)
 	if err != nil {
 		return errors.WithMessage(err, "failed to split host and port")
 	}
@@ -36,11 +43,11 @@ func (c *Client) RegisterCurrentService(addr, name string, tags []string, health
 		return errors.WithMessage(err, "failed to parse the service port")
 	}
 
-	c.currentServiceID = fmt.Sprintf("%s__%s:%d", name, host, port)
+	c.currentServiceID = fmt.Sprintf("%s__%s:%s", name, localIP, portstr)
 	service := consul.AgentServiceRegistration{
 		ID:      c.currentServiceID,
 		Name:    name,
-		Address: host,
+		Address: localIP.String(),
 		Port:    port,
 		Tags:    tags,
 		Checks:  healthChecks,
