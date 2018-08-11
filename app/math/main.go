@@ -60,7 +60,7 @@ func registerConsulService(config *cfg.Config) *xconsul.Client {
 		return nil
 	}
 
-	tags := []string{fmt.Sprintf("urlprefix-%s proto=tcp", config.ProxyAddr)} // for fabio load balancer
+	tags := []string{fmt.Sprintf("urlprefix-:%s proto=tcp", config.ProxyPort)} // for fabio load balancer
 	healthCheck := &consul.AgentServiceCheck{
 		Name:     "math service health check",
 		GRPC:     config.Addr,

@@ -21,7 +21,6 @@ const (
 	serverShutdownTimeout  = 60 * time.Second
 
 	serviceName         = "rest"
-	protocol            = "http://"
 	healthCheckURL      = "/healthz"
 	healthCheckInterval = "10s"
 	healthCheckTimeout  = "1s"
@@ -74,7 +73,7 @@ func registerConsulService(config *cfg.Config) *xconsul.Client {
 
 	healthCheck := &consul.AgentServiceCheck{
 		Name:     "rest api health check",
-		HTTP:     protocol + config.Addr + healthCheckURL,
+		HTTP:     "http://" + config.Addr + healthCheckURL,
 		Interval: healthCheckInterval,
 		Timeout:  healthCheckTimeout,
 	}
