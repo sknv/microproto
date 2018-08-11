@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"time"
@@ -59,6 +60,7 @@ func registerConsulService(config *cfg.Config) *xconsul.Client {
 		return nil
 	}
 
+	tags := []string{fmt.Sprintf("urlprefix-%s proto=tcp", config.ProxyAddr)} // for fabio load balancer
 	healthCheck := &consul.AgentServiceCheck{
 		Name:     "math service health check",
 		GRPC:     config.Addr,
@@ -66,7 +68,7 @@ func registerConsulService(config *cfg.Config) *xconsul.Client {
 		Timeout:  healthCheckTimeout,
 	}
 	if err = consulClient.RegisterCurrentService(
-		config.Addr, serviceName, consul.AgentServiceChecks{healthCheck},
+		config.Addr, serviceName, tags, consul.AgentServiceChecks{healthCheck},
 	); err != nil {
 		log.Print("[ERROR] failed to register current service: ", err)
 		return nil
