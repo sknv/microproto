@@ -7,7 +7,8 @@ import (
 )
 
 type Config struct {
-	Addr       string `long:"math-addr" env:"MATH_ADDR" default:"localhost:8081" description:"math service address"`
+	Addr       string `long:"math-addr" env:"MATH_ADDR" default:":8001" description:"math service address"`
+	ProxyPort  string `long:"math-proxy-port" env:"MATH_PROXY_PORT" default:"8000" description:"math services proxy port"`
 	ConsulAddr string `long:"consul-addr" env:"CONSUL_ADDR" default:"localhost:8500" description:"consul address"`
 }
 

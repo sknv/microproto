@@ -7,6 +7,8 @@ import (
 
 	consul "github.com/hashicorp/consul/api"
 	"github.com/pkg/errors"
+
+	"github.com/sknv/microproto/app/lib/xnet"
 )
 
 type Client struct {
@@ -25,23 +27,29 @@ func NewClient(consulAddr string) (*Client, error) {
 	return &Client{Client: client}, nil
 }
 
-func (c *Client) RegisterCurrentService(addr, name string, healthChecks consul.AgentServiceChecks) error {
-	host, sport, err := net.SplitHostPort(addr)
+func (c *Client) RegisterCurrentService(addr, name string, tags []string, healthChecks consul.AgentServiceChecks) error {
+	localIP, err := xnet.LocalIP()
+	if err != nil {
+		return errors.WithMessage(err, "failed to get local ip address")
+	}
+
+	_, portstr, err := net.SplitHostPort(addr)
 	if err != nil {
 		return errors.WithMessage(err, "failed to split host and port")
 	}
 
-	port, err := strconv.Atoi(sport)
+	port, err := strconv.Atoi(portstr)
 	if err != nil {
 		return errors.WithMessage(err, "failed to parse the service port")
 	}
 
-	c.currentServiceID = fmt.Sprintf("%s__%s:%d", name, host, port)
+	c.currentServiceID = fmt.Sprintf("%s__%s:%s", name, localIP, portstr)
 	service := consul.AgentServiceRegistration{
 		ID:      c.currentServiceID,
 		Name:    name,
-		Address: host,
+		Address: localIP.String(),
 		Port:    port,
+		Tags:    tags,
 		Checks:  healthChecks,
 	}
 	if err = c.Agent().ServiceRegister(&service); err != nil {
@@ -54,10 +62,10 @@ func (c *Client) DeregisterCurrentService() error {
 	return c.Agent().ServiceDeregister(c.currentServiceID)
 }
 
-func (c *Client) Service(service string) ([]*consul.ServiceEntry, *consul.QueryMeta, error) {
-	addrs, meta, err := c.Health().Service(service, "", true, nil)
-	if err != nil {
-		return nil, nil, errors.WithMessage(err, "failed to get services")
-	}
-	return addrs, meta, nil
-}
+// func (c *Client) Service(service string) ([]*consul.ServiceEntry, *consul.QueryMeta, error) {
+// 	addrs, meta, err := c.Health().Service(service, "", true, nil)
+// 	if err != nil {
+// 		return nil, nil, errors.WithMessage(err, "failed to get services")
+// 	}
+// 	return addrs, meta, nil
+// }

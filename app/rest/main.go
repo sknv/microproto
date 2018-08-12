@@ -21,7 +21,6 @@ const (
 	serverShutdownTimeout  = 60 * time.Second
 
 	serviceName         = "rest"
-	protocol            = "http://"
 	healthCheckURL      = "/healthz"
 	healthCheckInterval = "10s"
 	healthCheckTimeout  = "1s"
@@ -31,7 +30,7 @@ func main() {
 	cfg := cfg.Parse()
 
 	// connect to grpc
-	grpcConn, err := grpc.Dial(cfg.MathAddr, grpc.WithInsecure())
+	grpcConn, err := grpc.Dial(cfg.MathProxyAddr, grpc.WithInsecure())
 	xos.FailOnError(err, "failed to connect to grpc")
 	defer grpcConn.Close()
 
@@ -74,12 +73,12 @@ func registerConsulService(config *cfg.Config) *xconsul.Client {
 
 	healthCheck := &consul.AgentServiceCheck{
 		Name:     "rest api health check",
-		HTTP:     protocol + config.Addr + healthCheckURL,
+		HTTP:     "http://" + config.Addr + healthCheckURL,
 		Interval: healthCheckInterval,
 		Timeout:  healthCheckTimeout,
 	}
 	if err = consulClient.RegisterCurrentService(
-		config.Addr, serviceName, consul.AgentServiceChecks{healthCheck},
+		config.Addr, serviceName, nil, consul.AgentServiceChecks{healthCheck},
 	); err != nil {
 		log.Print("[ERROR] failed to register current service: ", err)
 		return nil
