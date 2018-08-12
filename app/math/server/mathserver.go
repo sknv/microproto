@@ -1,4 +1,4 @@
-package internal
+package server
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 
 	"github.com/twitchtv/twirp"
 
-	"github.com/sknv/microproto/app/services/math/rpc"
+	"github.com/sknv/microproto/app/math/rpc"
 )
 
 type MathServer struct{}

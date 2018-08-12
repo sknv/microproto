@@ -1,25 +1,26 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"time"
 
 	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
 	consul "github.com/hashicorp/consul/api"
 
-	"github.com/sknv/microproto/app/lib/xchi"
 	"github.com/sknv/microproto/app/lib/xconsul"
 	"github.com/sknv/microproto/app/lib/xhttp"
 	"github.com/sknv/microproto/app/lib/xos"
-	"github.com/sknv/microproto/app/rest/cfg"
-	"github.com/sknv/microproto/app/rest/server"
+	"github.com/sknv/microproto/app/math/cfg"
+	"github.com/sknv/microproto/app/math/rpc"
+	"github.com/sknv/microproto/app/math/server"
 )
 
 const (
-	concurrentRequestLimit = 1000
-	serverShutdownTimeout  = 60 * time.Second
+	serverShutdownTimeout = 60 * time.Second
 
-	serviceName         = "rest"
+	serviceName         = "math"
 	healthCheckURL      = "/healthz"
 	healthCheckInterval = "10s"
 	healthCheckTimeout  = "1s"
@@ -30,12 +31,12 @@ func main() {
 
 	// config the http router
 	router := chi.NewRouter()
-	xchi.UseDefaultMiddleware(router)
-	xchi.UseThrottle(router, concurrentRequestLimit)
+	router.Use(middleware.RealIP, middleware.Logger)
 
 	// handle requests
-	rest := server.NewRestServer(cfg)
-	rest.Route(router)
+	var math server.MathServer
+	twirpHandler := rpc.NewMathServer(&math, nil)
+	router.Mount(rpc.MathPathPrefix, twirpHandler)
 
 	// handle health check requests
 	var health xhttp.HealthServer
@@ -65,14 +66,15 @@ func registerConsulService(config *cfg.Config) *xconsul.Client {
 		return nil
 	}
 
+	tags := []string{fmt.Sprintf("urlprefix-/%s strip=/%s", serviceName, serviceName)} // for fabio load balancer
 	healthCheck := &consul.AgentServiceCheck{
-		Name:     "rest api health check",
+		Name:     "math service health check",
 		HTTP:     "http://" + config.Addr + healthCheckURL,
 		Interval: healthCheckInterval,
 		Timeout:  healthCheckTimeout,
 	}
 	if err = consulClient.RegisterCurrentService(
-		config.Addr, serviceName, nil, consul.AgentServiceChecks{healthCheck},
+		config.Addr, serviceName, tags, consul.AgentServiceChecks{healthCheck},
 	); err != nil {
 		log.Print("[ERROR] failed to register current service: ", err)
 		return nil

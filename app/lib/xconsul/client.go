@@ -1,60 +1,71 @@
 package xconsul
 
-// import (
-// 	"fmt"
-// 	"strconv"
-// 	"strings"
+import (
+	"fmt"
+	"net"
+	"strconv"
 
-// 	consul "github.com/hashicorp/consul/api"
-// 	"github.com/pkg/errors"
-// )
+	consul "github.com/hashicorp/consul/api"
+	"github.com/pkg/errors"
 
-// type Client struct {
-// 	*consul.Client
+	"github.com/sknv/microproto/app/lib/xnet"
+)
 
-// 	serviceID string
-// }
+type Client struct {
+	*consul.Client
 
-// func NewClient(consulAddr string) (*Client, error) {
-// 	config := consul.DefaultConfig()
-// 	config.Address = consulAddr
-// 	client, err := consul.NewClient(config)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return &Client{Client: client}, nil
-// }
+	currentServiceID string
+}
 
-// func (c *Client) RegisterService(addr, serviceName string) error {
-// 	addrs := strings.Split(addr, ":")
-// 	if len(addrs) != 2 {
-// 		return errors.Errorf("incorrect address format: %s", addr)
-// 	}
+func NewClient(consulAddr string) (*Client, error) {
+	config := consul.DefaultConfig()
+	config.Address = consulAddr
+	client, err := consul.NewClient(config)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to connect to consul")
+	}
+	return &Client{Client: client}, nil
+}
 
-// 	host := addrs[0]
-// 	port, err := strconv.Atoi(addrs[1])
-// 	if err != nil {
-// 		return err
-// 	}
+func (c *Client) RegisterCurrentService(addr, name string, tags []string, healthChecks consul.AgentServiceChecks) error {
+	localIP, err := xnet.LocalIP()
+	if err != nil {
+		return errors.WithMessage(err, "failed to get local ip address")
+	}
 
-// 	c.serviceID = fmt.Sprintf("%s__%s:%d", serviceName, host, port)
-// 	service := consul.AgentServiceRegistration{
-// 		ID:      c.serviceID,
-// 		Name:    serviceName,
-// 		Address: host,
-// 		Port:    port,
-// 	}
-// 	return c.Agent().ServiceRegister(&service)
-// }
+	_, portstr, err := net.SplitHostPort(addr)
+	if err != nil {
+		return errors.WithMessage(err, "failed to split host and port")
+	}
 
-// func (c *Client) DeregisterService() error {
-// 	return c.Agent().ServiceDeregister(c.serviceID)
-// }
+	port, err := strconv.Atoi(portstr)
+	if err != nil {
+		return errors.WithMessage(err, "failed to parse the service port")
+	}
 
-// func (c *Client) GetServices(service string) ([]*consul.ServiceEntry, *consul.QueryMeta, error) {
+	c.currentServiceID = fmt.Sprintf("%s__%s:%s", name, localIP, portstr)
+	service := consul.AgentServiceRegistration{
+		ID:      c.currentServiceID,
+		Name:    name,
+		Address: localIP.String(),
+		Port:    port,
+		Tags:    tags,
+		Checks:  healthChecks,
+	}
+	if err = c.Agent().ServiceRegister(&service); err != nil {
+		return errors.WithMessage(err, "failed to register service "+name)
+	}
+	return nil
+}
+
+func (c *Client) DeregisterCurrentService() error {
+	return c.Agent().ServiceDeregister(c.currentServiceID)
+}
+
+// func (c *Client) Service(service string) ([]*consul.ServiceEntry, *consul.QueryMeta, error) {
 // 	addrs, meta, err := c.Health().Service(service, "", true, nil)
 // 	if err != nil {
-// 		return nil, nil, errors.Wrap(err, "failed to get services")
+// 		return nil, nil, errors.WithMessage(err, "failed to get services")
 // 	}
 // 	return addrs, meta, nil
 // }

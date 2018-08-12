@@ -3,20 +3,19 @@ package cfg
 import (
 	"os"
 
-	flags "github.com/jessevdk/go-flags"
+	"github.com/sknv/microproto/app/lib/xflags"
 )
 
 type Config struct {
-	Addr    string `long:"rest-addr" env:"REST_ADDR" default:"localhost:8080" description:"rest api address"`
-	MathURL string `long:"math-url" env:"MATH_URL" default:"http://localhost:8081" description:"math service url"`
-	// ConsulAddr string `long:"consul-addr" env:"CONSUL_ADDR" default:"localhost:8500" description:"consul service"`
+	Addr          string `long:"rest-addr" env:"REST_ADDR" default:":8080" description:"rest api address"`
+	ConsulAddr    string `long:"consul-addr" env:"CONSUL_ADDR" default:"127.0.0.1:8500" description:"consul address"`
+	MathProxyAddr string `long:"math-proxy-addr" env:"MATH_PROXY_ADDR" default:"http://127.0.0.1:8001" description:"proxy address for math services"`
 }
 
 func Parse() *Config {
-	var cfg Config
-	flagParser := flags.NewParser(&cfg, flags.Default)
-	if _, err := flagParser.ParseArgs(os.Args[1:]); err != nil {
+	cfg := new(Config)
+	if _, err := xflags.ParseArgs(os.Args[1:], cfg); err != nil {
 		os.Exit(1)
 	}
-	return &cfg
+	return cfg
 }

@@ -5,41 +5,35 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/render"
+	"github.com/pkg/errors"
 	"github.com/twitchtv/twirp"
 
 	"github.com/sknv/microproto/app/lib/xhttp"
+	"github.com/sknv/microproto/app/lib/xtwirp"
+	math "github.com/sknv/microproto/app/math/rpc"
 	"github.com/sknv/microproto/app/rest/cfg"
-	math "github.com/sknv/microproto/app/services/math/rpc"
 )
 
 type RestServer struct {
-	// consulClient *xconsul.Client
 	mathClient math.Math
 }
 
 func NewRestServer(config *cfg.Config) *RestServer {
-	// consulClient, err := xconsul.NewClient(config.ConsulAddr)
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, "failed to create a rest server")
-	// }
-
-	return &RestServer{
-		// consulClient: consulClient,
-		mathClient: math.NewMathProtobufClient(config.MathURL, &http.Client{}),
-	}
+	return &RestServer{mathClient: math.NewMathProtobufClient(config.MathProxyAddr, &http.Client{})}
 }
 
 func (s *RestServer) Route(router chi.Router) {
 	router.Route("/math", func(r chi.Router) {
-		r.Get("/rect", s.Rect)
-		r.Get("/circle", s.Circle)
+		r.Get("/rect", s.rect)
+		r.Get("/circle", s.circle)
 	})
 }
 
-func (s *RestServer) Rect(w http.ResponseWriter, r *http.Request) {
+func (s *RestServer) rect(w http.ResponseWriter, r *http.Request) {
 	queryParams := r.URL.Query()
 	width := parseFloat(w, queryParams.Get("w"))
 	height := parseFloat(w, queryParams.Get("h"))
@@ -48,19 +42,27 @@ func (s *RestServer) Rect(w http.ResponseWriter, r *http.Request) {
 		Height: height,
 	}
 
-	reply, err := s.mathClient.Rect(context.Background(), &args)
+	// set the reply timeout
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	reply, err := s.mathClient.Rect(ctx, &args)
 	abortOnError(w, err)
 	render.JSON(w, r, reply)
 }
 
-func (s *RestServer) Circle(w http.ResponseWriter, r *http.Request) {
+func (s *RestServer) circle(w http.ResponseWriter, r *http.Request) {
 	queryParams := r.URL.Query()
 	radius := parseFloat(w, queryParams.Get("r"))
 	args := math.CircleArgs{
 		Radius: radius,
 	}
 
-	reply, err := s.mathClient.Circle(context.Background(), &args)
+	// set the reply timeout
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	reply, err := s.mathClient.Circle(ctx, &args)
 	abortOnError(w, err)
 	render.JSON(w, r, reply)
 }
@@ -84,12 +86,14 @@ func abortOnError(w http.ResponseWriter, err error) {
 		return
 	}
 
-	terr := err.(twirp.Error)
-	status := twirp.ServerHTTPStatusFromErrorCode(terr.Code())
-	if status != http.StatusInternalServerError {
-		log.Print("[ERROR] abort on error: ", terr)
-		http.Error(w, terr.Msg(), status)
+	log.Print("[ERROR] abort on error: ", err)
+
+	cause := errors.Cause(err)
+	status, _ := xtwirp.FromError(cause)
+	httpCode := twirp.ServerHTTPStatusFromErrorCode(status.Code())
+	if httpCode != http.StatusInternalServerError {
+		http.Error(w, status.Msg(), httpCode)
 		xhttp.AbortHandler()
 	}
-	panic(terr)
+	xhttp.AbortHandlerWithInternalError(w)
 }
