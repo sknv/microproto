@@ -1,0 +1,30 @@
+# global configuration
+debug = true
+defaultEntryPoints = ["https"]
+
+# entrypoints configuration
+[entryPoints]
+  [entryPoints.https]
+  address = ":443"
+
+  [entryPoints.api]
+  address = ":8090"
+
+# enable API and dashboard
+[api]
+  entryPoint = "api"
+
+[file] # use the following config
+
+[frontends]
+  [frontends.fe_grpc]
+  backend = "be_grpc"
+    [frontends.fe_grpc.routes.test1]
+    rule = "Host:127.0.0.1"
+
+[backends]
+  [backends.be_grpc]
+    [backends.be_grpc.servers.server1]
+    url = "h2c://127.0.0.1:8001"
+    [backends.be_grpc.servers.server2]
+    url = "h2c://127.0.0.1:8002"
