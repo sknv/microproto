@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net"
 	"time"
@@ -12,6 +11,7 @@ import (
 	"github.com/sknv/microproto/app/lib/xconsul"
 	"github.com/sknv/microproto/app/lib/xgrpc"
 	"github.com/sknv/microproto/app/lib/xos"
+	"github.com/sknv/microproto/app/lib/xtraefik"
 	"github.com/sknv/microproto/app/math/cfg"
 	"github.com/sknv/microproto/app/math/rpc"
 	"github.com/sknv/microproto/app/math/server"
@@ -60,7 +60,6 @@ func registerConsulService(config *cfg.Config) *xconsul.Client {
 		return nil
 	}
 
-	tags := []string{fmt.Sprintf("urlprefix-:%s proto=tcp", config.ProxyPort)} // for fabio load balancer
 	healthCheck := &consul.AgentServiceCheck{
 		Name:     "math service health check",
 		GRPC:     config.Addr,
@@ -68,7 +67,7 @@ func registerConsulService(config *cfg.Config) *xconsul.Client {
 		Timeout:  healthCheckTimeout,
 	}
 	if err = consulClient.RegisterCurrentService(
-		config.Addr, serviceName, tags, consul.AgentServiceChecks{healthCheck},
+		config.Addr, serviceName, xtraefik.TagsForGrpc(), consul.AgentServiceChecks{healthCheck},
 	); err != nil {
 		log.Print("[ERROR] failed to register current service: ", err)
 		return nil

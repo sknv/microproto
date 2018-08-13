@@ -8,8 +8,7 @@ import (
 
 type Config struct {
 	Addr       string `long:"math-addr" env:"MATH_ADDR" default:":8001" description:"math service address"`
-	ProxyPort  string `long:"math-proxy-port" env:"MATH_PROXY_PORT" default:"8000" description:"math services proxy port"`
-	ConsulAddr string `long:"consul-addr" env:"CONSUL_ADDR" default:"localhost:8500" description:"consul address"`
+	ConsulAddr string `long:"consul-addr" env:"CONSUL_ADDR" default:"127.0.0.1:8500" description:"consul address"`
 }
 
 func Parse() *Config {

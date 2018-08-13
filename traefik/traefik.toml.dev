@@ -1,0 +1,20 @@
+# global configuration
+debug = true
+
+# entrypoints configuration
+[entryPoints]
+  [entryPoints.http]
+  address = ":80"
+
+  [entryPoints.api]
+  address = ":8090"
+
+# enable API and dashboard
+[api]
+  entryPoint = "api"
+
+# enable consul catalog provider
+[consulCatalog]
+  endpoint = "127.0.0.1:8500" # consul address
+  exposedByDefault = false    # do not expose consul catalog services by default in traefik
+  domain = "consul.local"     # default domain
