@@ -5,11 +5,16 @@ services:
     image: consul:1.2.2
     command: agent -dev -ui -client=0.0.0.0 -log-level=info
     network_mode: host
+    # ports:
+    #   - 8500:8500 # consul port
     restart: unless-stopped
 
   traefik:
     image: traefik:v1.7-alpine
     network_mode: host
+    # ports:
+    #   - 80:80 # traefik port
+    #   - 8090:8090 # traefik api and web ui port
     volumes:
       - ./traefik/traefik.toml:/etc/traefik/traefik.toml # set the config file
     restart: unless-stopped

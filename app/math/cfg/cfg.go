@@ -7,7 +7,7 @@ import (
 )
 
 type Config struct {
-	Addr       string `long:"math-addr" env:"MATH_ADDR" default:":8001" description:"math service address"`
+	Addr       string `long:"math-addr" env:"MATH_ADDR" default:":8001" description:"math server address"`
 	ConsulAddr string `long:"consul-addr" env:"CONSUL_ADDR" default:"127.0.0.1:8500" description:"consul address"`
 }
 
