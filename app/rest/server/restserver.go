@@ -32,6 +32,10 @@ func (s *RestServer) Route(router chi.Router) {
 	})
 }
 
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
 func (s *RestServer) rect(w http.ResponseWriter, r *http.Request) {
 	queryParams := r.URL.Query()
 	width := parseFloat(w, queryParams.Get("w"))
