@@ -12,6 +12,7 @@ import (
 	"github.com/sknv/microproto/app/lib/xconsul"
 	"github.com/sknv/microproto/app/lib/xhttp"
 	"github.com/sknv/microproto/app/lib/xos"
+	"github.com/sknv/microproto/app/lib/xtraefik"
 	"github.com/sknv/microproto/app/rest/cfg"
 	"github.com/sknv/microproto/app/rest/server"
 )
@@ -79,7 +80,7 @@ func registerConsulService(config *cfg.Config) *xconsul.Client {
 		Timeout:  healthCheckTimeout,
 	}
 	if err = consulClient.RegisterCurrentService(
-		config.Addr, serviceName, nil, consul.AgentServiceChecks{healthCheck},
+		config.Addr, serviceName, xtraefik.Tags(), consul.AgentServiceChecks{healthCheck},
 	); err != nil {
 		log.Print("[ERROR] failed to register current service: ", err)
 		return nil
